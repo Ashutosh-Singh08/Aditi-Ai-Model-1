@@ -60,8 +60,8 @@ Aditi/
 
 
 1. Clone the Repository
-git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git
-cd YOUR_REPOSITORY_NAME
+git clone https://github.com/Ashutosh-Singh08/Aditi-Ai-Model-1.git
+
 
 2. Install Backend Dependencies
 cd backend
