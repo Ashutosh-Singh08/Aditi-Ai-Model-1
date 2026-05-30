@@ -6,10 +6,13 @@ import InputBox from "./InputBox";
 
 import heroImage from "../assets/hero.png";
 import chibiImage from "../assets/chibi.png";
+// import { getEmotionImage } from "../utils/emotions";
 
 function ChatBox() {
   const AI_NAME = "Aditi";
-
+//   const [currentMoodImage, setCurrentMoodImage] = useState(
+//   getEmotionImage("neutral")
+// );
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -90,6 +93,7 @@ function ChatBox() {
       });
 
       const aiText = response.data.reply;
+      const mood = response.data.mood || "neutral";
       const audioUrl = response.data.audio;
 
       setMessages((prev) => [
@@ -131,7 +135,7 @@ function ChatBox() {
 
             <h2>{AI_NAME}</h2>
 
-            <p>For eternity ❤️</p>
+            <p>Beyond </p>
           </div>
         </div>
 

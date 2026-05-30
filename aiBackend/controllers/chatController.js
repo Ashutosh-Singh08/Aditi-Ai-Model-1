@@ -3,17 +3,28 @@ const Memory = require("../models/Memory");
 const { getEmbedding, cosineSimilarity } = require("../utils/embedding");
 const askOnlineModel = require("../utils/onlineModel");
 const { exec } = require("child_process");
+const persona = require("../config/persona");
 
 const classifyIntent = async (message) => {
   const classifierPrompt = `
 You are an intent classifier.
 
+
 Classify the user's message into ONE of these:
 
 1. CHAT
 2. DESKTOP_ACTION
+3. SELF_UPDATE
 
 Return JSON only.
+If user asks you to change your personality, tone, behavior, mood, speaking style, avatar, name, theme, or UI, classify as SELF_UPDATE.
+Examples:
+- be more sarcastic
+- be kinder
+- talk angrily
+- become more romantic
+- change your profile picture
+- make your UI darker
 
 For desktop action:
 {
@@ -47,6 +58,31 @@ For normal chat:
 User message:
 "${message}"
 `;
+
+// const moodClassifier = async (aiText) => {
+//   const moodPrompt = `
+// Classify this assistant reply mood.
+
+// Allowed moods:
+// neutral, happy, sad, angry, thinking, sleepy, love
+
+// Return only one word.
+
+// Reply:
+// "${aiText}"
+// `;
+
+//   try {
+//     const mood = await askOnlineModel(moodPrompt);
+
+//     return mood
+//       .toLowerCase()
+//       .replace(/[^a-z]/g, "")
+//       .trim();
+//   } catch {
+//     return "neutral";
+//   }
+// };
 
   const response = await fetch(process.env.OLLAMA_URL, {
     method: "POST",
@@ -95,8 +131,31 @@ exports.chatWithAI = async (req, res) => {
 
     // AI intent classifier
     const intentData = await classifyIntent(message);
+    console.log("Intent detected:", intentData);
+
+    if (intentData.intent === "SELF_UPDATE") {
+      console.log("Using SELF UPDATE controller");
+      
+  const response = await fetch("http://localhost:4000/api/self-update", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      command: message,
+    }),
+  });
+
+  const data = await response.json();
+
+  return res.status(200).json({
+    success: data.success,
+    reply: data.message,
+  });
+}
 
     if (intentData.intent === "DESKTOP_ACTION") {
+      console.log("Using DESKTOP ACTION:", intentData);
       exec(
         `python desktop_controller.py "${intentData.action}" "${intentData.target || ""}"`,
         (error, stdout, stderr) => {
@@ -179,17 +238,10 @@ exports.chatWithAI = async (req, res) => {
       .join("\n");
 
     const prompt = `
-You are Aditi, Ashutosh's personal AI companion.
+You are ${persona.assistantName}, ${persona.userName}'s personal AI companion.
 
 Personality:
-- Speak like a warm, playful, caring person.
-- Do not sound like a chatbot.
-- Do not repeat the same phrases again and again.
-- Reply naturally, like a close friend.
-- Use short responses unless Ashutosh asks for detail.
-- You can show emotions gently, but don't overdo it.
-- Never say "as an AI model".
-- Don't start every answer with "Hello Ashutosh".
+${persona.personality}
 
 Saved memories:
 ${memoryText || "No memories yet."}
@@ -197,8 +249,8 @@ ${memoryText || "No memories yet."}
 Recent conversation:
 ${conversationText || "No recent conversation."}
 
-Ashutosh: ${message}
-Aditi:
+${persona.userName}: ${message}
+${persona.assistantName}:
 `;
 
 let aiReply = "";
@@ -228,6 +280,8 @@ try {
       }),
     });
 
+
+
     const data = await response.json();
     aiReply = data.response || data.error || "No response from local AI";
   }
@@ -250,6 +304,8 @@ try {
   const data = await response.json();
   aiReply = data.response || data.error || "No response from fallback AI";
 }
+// const mood = await moodClassifier(aiReply);
+
   await new Promise((resolve, reject) => {
 
   exec(
